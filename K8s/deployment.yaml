@@ -1,0 +1,20 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: pyapp-deployment
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels: 
+      app: myapp 
+  template: 
+    metadata: 
+      labels: 
+        app: myapp 
+    spec: 
+      containers: 
+      - name: myapp 
+        image: madheshravi/tic_tac_toe:17
+        imagePullPolicy: Never 
+        ports: 
+        - containerPort: 5000 

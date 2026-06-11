@@ -1,0 +1,76 @@
+<!-- templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        table {
+            margin: auto;
+        }
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        h3 {
+            margin-top: 20px;
+        }
+        p {
+            font-weight: bold;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tic-Tac-Toe</h1>
+    
+    <table>
+        <tr>
+            <th>{{ board[0] }}</th>
+            <th>{{ board[1] }}</th>
+            <th>{{ board[2] }}</th>
+        </tr>
+        <tr>
+            <th>{{ board[3] }}</th>
+            <th>{{ board[4] }}</th>
+            <th>{{ board[5] }}</th>
+        </tr>
+        <tr>
+            <th>{{ board[6] }}</th>
+            <th>{{ board[7] }}</th>
+            <th>{{ board[8] }}</th>
+        </tr>
+    </table>
+
+    <form method="POST" action="{{ url_for('make_move') }}">
+        <h3>Player's Turn: {{ "Player X" if "X" in current_player else "Player O" }}</h3>
+        <label for="choice">Enter your move (1-9): </label>
+        <input type="number" id="choice" name="choice" min="1" max="9" required>
+        <input type="submit" value="Make Move">
+    </form>
+
+    {% if result %}
+        <p>{{ result }}</p>
+        <form method="POST" action="{{ url_for('restart_game') }}">
+            <input type="submit" value="Restart Game">
+        </form>
+    {% endif %}
+
+</body>
+</html>
