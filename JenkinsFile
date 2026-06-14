@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 environment {
     IMAGE_NAME = "madheshravi/tic_tac_toe"
     GIT_REPO = "https://github.com/Madheshwaranr/Tic_Tac_Toe_Game-K8.git"
@@ -68,6 +67,5 @@ post {
         echo 'Pipeline failed.'
     }
 }
-```
 
 }
