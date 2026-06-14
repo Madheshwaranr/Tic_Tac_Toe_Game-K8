@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Set up Docker Build') {
+            steps {
+                sh 'apt-get update && apt-get install -y docker.io'
+                sh 'docker build -t madheshravi/tic_tac_toe:${BUILD_NUMBER} .'
+            }
+        }
+    }
+
+    stages {
+        stage('Login and Push to Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', 
+                                usernameVariable: 'DOCKER_USER', 
+                                passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
+                    sh "docker push madheshravi/tic_tac_toe:${BUILD_NUMBER}"
+                }
+            }
+        }
+    }
+
+    stages {
+        stage('Update image tag in Deploment') {
+            environment {
+                GIT_REPO_NAME = "Tic_Tac_Toe_Game-K8"
+                GIT_USER_NAME = "Madheshwaranr"
+            }
+            steps {
+                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                    sh '''
+                        git config user.email "kevinjoeharris1@gmail.com"
+                        git config user.name "Madheshwaranr"
+                        BUILD_NUMBER=${BUILD_NUMBER}
+                        sed -i "s|tic_tac_toe:.*|tic_tac_toe:${BUILD_NUMBER}|g" Tic_Tac_Toe/K8s/deployment.yaml
+                        git commit -am "ci: bump image to ${BUILD_NUMBER}"
+                        git push
+                    '''
+            }
+        }
+        }
+    }
+}
