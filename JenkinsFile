@@ -1,50 +1,73 @@
 pipeline {
-    agent {
-        docker {
-            image '3.15.0b2-alpine3.23'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
-    }
-    }
+agent any
 
-    stages {
-        stage('Set up Docker Build') {
-            steps {
-                sh 'docker build -t madheshravi/tic_tac_toe:${BUILD_NUMBER} .'
-            }
-        }
-    }
+```
+environment {
+    IMAGE_NAME = "madheshravi/tic_tac_toe"
+    GIT_REPO = "https://github.com/Madheshwaranr/Tic_Tac_Toe_Game-K8.git"
+    GIT_BRANCH = "main"
+}
 
-    stages {
-        stage('Login and Push to Registry') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', 
-                                usernameVariable: 'DOCKER_USER', 
-                                passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
-                    sh "docker push madheshravi/tic_tac_toe:${BUILD_NUMBER}"
-                }
-            }
+stages {
+    stage('Build Docker Image') {
+        steps {
+            sh '''
+                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+            '''
         }
     }
 
-    stages {
-        stage('Update image tag in Deploment') {
-            environment {
-                GIT_REPO_NAME = "Tic_Tac_Toe_Game-K8"
-                GIT_USER_NAME = "Madheshwaranr"
+    stage('Push Docker Image') {
+        steps {
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                )
+            ]) {
+                sh '''
+                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    docker logout
+                '''
             }
-            steps {
-                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                    sh '''
-                        git config user.email "kevinjoeharris1@gmail.com"
-                        git config user.name "Madheshwaranr"
-                        BUILD_NUMBER=${BUILD_NUMBER}
-                        sed -i "s|tic_tac_toe:.*|tic_tac_toe:${BUILD_NUMBER}|g" Tic_Tac_Toe/K8s/deployment.yaml
-                        git commit -am "ci: bump image to ${BUILD_NUMBER}"
-                        git push
-                    '''
-            }
-        }
         }
     }
+
+    stage('Update Kubernetes Manifest') {
+        steps {
+            dir('gitops-repo') {
+                deleteDir()
+            }
+
+            withCredentials([
+                string(credentialsId: 'github', variable: 'GITHUB_TOKEN')
+            ]) {
+                sh '''
+                    git clone https://${GITHUB_TOKEN}@github.com/Madheshwaranr/Tic_Tac_Toe_Game-K8.git gitops-repo
+                    cd gitops-repo
+                    git config user.email "kevinjoeharris1@gmail.com"
+                    git config user.name "Madheshwaranr"
+                    sed -i "s|image: .*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" K8s/deployment.yaml
+                    git add K8s/deployment.yaml
+                    git diff --cached --quiet || git commit -m "ci: update image tag to ${BUILD_NUMBER}"
+                    git push origin main
+                '''
+            }
+        }
+    }
+}
+
+post {
+    success {
+        echo 'Pipeline completed successfully.'
+    }
+
+    failure {
+        echo 'Pipeline failed.'
+    }
+}
+```
+
 }
